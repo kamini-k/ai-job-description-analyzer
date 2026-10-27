@@ -77,5 +77,5 @@ CSV reports are supported using Python's standard `csv` module. PDF report gener
 - Requirement classification uses explicit labels and phrase cues. Ambiguous mentions are marked inferred; review them before relying on the result.
 - The hand-maintained dictionary cannot recognize every technology, qualification, or synonym.
 - Experience and qualification alignment checks for relevant text; they do not validate years, degrees, or eligibility.
-- Learning and interview suggestions are generic prompts based on listed skills; they do not claim completed training, projects, or experience.
+- Learning roadmaps for missing skills link each study topic to that skill's learning resource, list subjects to cover, explain a study-and-practice approach, and include a category-specific project and progress check. They are guidance and do not claim completed training, projects, or experience.
 - Do not upload personal information unless you are authorized to process it.

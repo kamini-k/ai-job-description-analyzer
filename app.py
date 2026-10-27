@@ -1,4 +1,5 @@
 import hashlib
+from html import escape
 
 import streamlit as st
 
@@ -15,6 +16,76 @@ st.set_page_config(
 )
 
 SAMPLE_CANDIDATE = "Python, Git"
+
+ROADMAP_PROJECTS = {
+    "Programming languages": "Build a small command-line program in {skill} that solves a real, well-defined problem. Include input validation, clear structure, and a few tests.",
+    "Web development": "Build and publish a small, accessible web feature using {skill}. Check it in a browser at both mobile and desktop sizes.",
+    "Databases": "Create a small data-backed application using {skill}. Define the data model, implement create/read/update/delete operations, and verify edge cases.",
+    "Data and AI": "Use a public or synthetic dataset to build a small {skill} project. Establish a simple baseline, document your method, and evaluate results on data you did not use to build it.",
+    "Development tools": "Use {skill} to manage, inspect, test, or deliver a small software project. Record the workflow and verify that another person can follow it.",
+    "Computer science fundamentals": "Create a small, runnable demonstration of {skill}. Compare at least two cases or approaches and explain the trade-offs with measured or observable evidence.",
+    "Professional skills": "Apply {skill} during a real or practice collaboration. Agree on a goal, communicate progress, ask for feedback, and write a short reflection with a concrete example.",
+    "Cloud and DevOps": "Deploy a small application or service using {skill}. Document the setup and verify deployment, logs, access controls, and a safe cleanup or rollback path.",
+}
+
+ROADMAP_TOPICS = {
+    "Programming languages": (
+        "Core syntax, values, and data types",
+        "Conditionals, loops, and functions",
+        "Collections, modules, and error handling",
+        "Readable program structure and basic testing",
+        "Applying the language to a small complete program",
+    ),
+    "Web development": (
+        "How browsers, URLs, HTTP requests, and responses work",
+        "Semantic page structure and accessible interactions",
+        "Responsive styling and browser behavior",
+        "Components, application state, and user input",
+        "Connecting a frontend to an API and handling errors",
+    ),
+    "Databases": (
+        "Tables or document models, fields, and data types",
+        "Creating, reading, updating, and deleting records",
+        "Filtering, sorting, joins, and aggregation where applicable",
+        "Constraints, indexes, and query performance",
+        "Transactions, validation, and safe data changes",
+    ),
+    "Data and AI": (
+        "Data formats, collection, and data quality",
+        "Cleaning, exploration, and summary statistics",
+        "Core concepts and methods used by the selected tool or field",
+        "Building a simple baseline and choosing suitable measures",
+        "Validation, limitations, bias, and communicating results",
+    ),
+    "Development tools": (
+        "The tool's purpose, setup, and essential terminology",
+        "The everyday workflow and key commands or features",
+        "Organizing and documenting work for collaboration",
+        "Testing changes and diagnosing common failures",
+        "Safe, repeatable use in a small end-to-end project",
+    ),
+    "Computer science fundamentals": (
+        "Core concepts, vocabulary, and common examples",
+        "Data or process representation and how it operates",
+        "Correctness, edge cases, and failure conditions",
+        "Efficiency and trade-offs between approaches",
+        "Implementing or tracing a small example",
+    ),
+    "Professional skills": (
+        "The skill's core principles and common workplace situations",
+        "Active listening, clear communication, and shared expectations",
+        "Breaking work into actions and agreeing on responsibilities",
+        "Giving, receiving, and applying constructive feedback",
+        "Reflecting on outcomes and identifying a next improvement",
+    ),
+    "Cloud and DevOps": (
+        "Cloud or delivery concepts, terminology, and architecture",
+        "Setting up a small development environment or workflow",
+        "Deploying and verifying a simple service or automation",
+        "Logs, monitoring, permissions, and troubleshooting",
+        "Cost awareness, security basics, and safe cleanup or rollback",
+    ),
+}
 
 
 def _render_analysis(result: Analysis, candidate_text: str) -> None:
@@ -65,21 +136,16 @@ def _render_analysis(result: Analysis, candidate_text: str) -> None:
 
     with st.expander(f"Matched skills ({len(matched)})", expanded=True):
         if matched:
-            st.dataframe(
-                [
-                    {
-                        "Skill": item.skill,
-                        "Category": item.category,
-                        "Requirement": item.requirement_type.title(),
-                        "Job evidence": item.evidence,
-                        "Candidate evidence": item.candidate_evidence,
-                        "Explanation": item.explanation,
-                    }
-                    for item in matched
-                ],
-                width="stretch",
-                hide_index=True,
-            )
+            for item in matched:
+                with st.container(border=True):
+                    st.markdown(f"**{item.skill}**")
+                    st.text(
+                        f"Category: {item.category}\n"
+                        f"Requirement: {item.requirement_type.title()}\n"
+                        f"Job evidence: {item.evidence}\n"
+                        f"Candidate evidence: {item.candidate_evidence}\n"
+                        f"Explanation: {item.explanation}"
+                    )
         else:
             st.write("No matching skills were detected in the supplied evidence.")
 
@@ -108,7 +174,21 @@ def _render_analysis(result: Analysis, candidate_text: str) -> None:
     if result.keyword_coverage is not None:
         st.metric("Important job keyword coverage", f"{result.keyword_coverage:.2f}%")
     if result.keywords:
-        st.dataframe(list(result.keywords), width="stretch", hide_index=True)
+        rows = "".join(
+            "<tr>"
+            f"<td>{escape(item['keyword'])}</td>"
+            f"<td>{escape(item['category'])}</td>"
+            f"<td>{'Found' if item['found'] == 'yes' else 'Not found'}</td>"
+            "</tr>"
+            for item in result.keywords
+        )
+        st.markdown(
+            "<table>"
+            "<thead><tr><th>Keyword</th><th>Category</th><th>Candidate evidence</th></tr></thead>"
+            f"<tbody>{rows}</tbody>"
+            "</table>",
+            unsafe_allow_html=True,
+        )
 
     st.subheader("Experience and qualifications")
     st.write(f"**Experience:** {result.experience_alignment}")
@@ -129,9 +209,30 @@ def _render_analysis(result: Analysis, candidate_text: str) -> None:
             skill = SKILLS_BY_NAME[name]
             with st.expander(f"{position}. Learn {name} · {skill.category}"):
                 st.write(f"**Why it matters:** This skill appears in the job description.")
-                st.write(f"**Practice exercise:** {skill.exercise}")
-                st.write(f"**Milestone:** Complete the exercise and be able to explain your approach.")
-                st.markdown(f"[Learning resource]({skill.resource})")
+                st.markdown(f"**Where to learn:** [{name} learning resource]({skill.resource})")
+                st.markdown("**What to study:**")
+                for topic in ROADMAP_TOPICS.get(skill.category, ()):
+                    st.markdown(f"- [{topic}]({skill.resource})")
+                st.write(
+                    "**How to study:** Follow the linked material in order. For each topic, "
+                    "read or watch one lesson, recreate its example without copy-pasting, then "
+                    "change one detail and note what happens."
+                )
+                st.write(f"**Practice:** {skill.exercise}")
+                project = ROADMAP_PROJECTS.get(
+                    skill.category,
+                    "Build a small, documented project that demonstrates {skill}.",
+                ).format(skill=name)
+                st.write(f"**Apply it:** {project}")
+                st.write(
+                    "**Check your progress:** Test the main behavior and at least one edge "
+                    "case, write down what you learned, and practise explaining your choices "
+                    "and limitations."
+                )
+                st.caption(
+                    "You are ready to move on when you can complete the practice task, "
+                    "explain the core concepts, and show evidence from your project."
+                )
 
     st.subheader("Interview preparation")
     if matched:
